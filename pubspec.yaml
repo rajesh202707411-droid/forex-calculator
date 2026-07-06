@@ -1,0 +1,37 @@
+name: forex_calculator
+description: A complete forex trading calculator app with 11 calculators, 5 themes, live rates, history, multi-language support, and advanced trading tools.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Persistence & Storage
+  shared_preferences: ^2.2.3          # Theme & language preferences
+  hive: ^2.2.3                        # Local database for calculation history
+  hive_flutter: ^1.1.0                # Hive Flutter integration
+  
+  # UI & Fonts
+  google_fonts: ^6.2.1                # Better typography
+  
+  # Utilities
+  intl: ^0.19.0                       # Number formatting (currency/decimal)
+  http: ^1.1.0                        # HTTP requests for live exchange rates
+  
+  # State Management (if needed in future)
+  # provider: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_linter:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
