@@ -3,33 +3,43 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'dart:ui';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  await Hive.openBox('calculationHistory');
-  await Hive.openBox('favorites');
   runApp(const ForexCalculatorApp());
 }
 
-// Professional Color Scheme (ForexPro Style)
+// Professional Color Themes
 class AppColors {
-  // Dark Navy & Gold Theme
-  static const Color surface = Color(0xFF141218);
-  static const Color surfaceContainer = Color(0xFF211F24);
-  static const Color surfaceContainerHigh = Color(0xFF2B292F);
-  static const Color primary = Color(0xFFCFBCFF);
-  static const Color primaryContainer = Color(0xFF6750A4);
-  static const Color tertiary = Color(0xFFE7C365); // Gold
-  static const Color onSurface = Color(0xFFE6E0E9);
-  static const Color onSurfaceVariant = Color(0xFFCBC4D2);
-  static const Color error = Color(0xFFFFB4AB);
-  static const Color errorContainer = Color(0xFF93000A);
-  static const Color outline = Color(0xFF948E9C);
+  // Theme 1: Dark Navy & Gold
+  static const theme1Primary = Color(0xFFCFBCFF);
+  static const theme1Secondary = Color(0xFFE7C365);
+  static const theme1Surface = Color(0xFF141218);
+  static const theme1SurfaceContainer = Color(0xFF211F24);
+
+  // Theme 2: Light Blue & White
+  static const theme2Primary = Color(0xFF0D47A1);
+  static const theme2Secondary = Color(0xFF1976D2);
+  static const theme2Surface = Color(0xFFF5F5F5);
+  static const theme2SurfaceContainer = Color(0xFFFFFFFF);
+
+  // Theme 3: Dark Green & Lime
+  static const theme3Primary = Color(0xFF4CAF50);
+  static const theme3Secondary = Color(0xFF8BC34A);
+  static const theme3Surface = Color(0xFF1B5E20);
+  static const theme3SurfaceContainer = Color(0xFF2E7D32);
+
+  // Theme 4: Purple & Neon
+  static const theme4Primary = Color(0xFF9C27B0);
+  static const theme4Secondary = Color(0xFF00E676);
+  static const theme4Surface = Color(0xFF1A0033);
+  static const theme4SurfaceContainer = Color(0xFF2D0052);
+
+  // Theme 5: Black & Cyan
+  static const theme5Primary = Color(0xFF00BCD4);
+  static const theme5Secondary = Color(0xFF00E5FF);
+  static const theme5Surface = Color(0xFF000000);
+  static const theme5SurfaceContainer = Color(0xFF1A1A1A);
 }
 
 class ForexCalculatorApp extends StatefulWidget {
@@ -41,7 +51,7 @@ class ForexCalculatorApp extends StatefulWidget {
 
 class _ForexCalculatorAppState extends State<ForexCalculatorApp> {
   int _selectedThemeIndex = 0;
-  String _selectedLanguage = 'en';
+  int _selectedCalculator = 0;
 
   @override
   void initState() {
@@ -53,7 +63,7 @@ class _ForexCalculatorAppState extends State<ForexCalculatorApp> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _selectedThemeIndex = prefs.getInt('selectedTheme') ?? 0;
-      _selectedLanguage = prefs.getString('language') ?? 'en';
+      _selectedCalculator = prefs.getInt('selectedCalculator') ?? 0;
     });
   }
 
@@ -62,768 +72,229 @@ class _ForexCalculatorAppState extends State<ForexCalculatorApp> {
     await prefs.setInt('selectedTheme', index);
   }
 
-  Future<void> _saveLanguage(String lang) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', lang);
+  ThemeData _getTheme(int themeIndex) {
+    final themes = [
+      _buildTheme(AppColors.theme1Primary, AppColors.theme1Secondary, AppColors.theme1Surface, AppColors.theme1SurfaceContainer),
+      _buildTheme(AppColors.theme2Primary, AppColors.theme2Secondary, AppColors.theme2Surface, AppColors.theme2SurfaceContainer),
+      _buildTheme(AppColors.theme3Primary, AppColors.theme3Secondary, AppColors.theme3Surface, AppColors.theme3SurfaceContainer),
+      _buildTheme(AppColors.theme4Primary, AppColors.theme4Secondary, AppColors.theme4Surface, AppColors.theme4SurfaceContainer),
+      _buildTheme(AppColors.theme5Primary, AppColors.theme5Secondary, AppColors.theme5Surface, AppColors.theme5SurfaceContainer),
+    ];
+    return themes[themeIndex % themes.length];
   }
 
-  void _changeTheme(int index) {
-    setState(() {
-      _selectedThemeIndex = index;
-    });
-    _saveTheme(index);
-  }
-
-  void _changeLanguage(String lang) {
-    setState(() {
-      _selectedLanguage = lang;
-    });
-    _saveLanguage(lang);
+  ThemeData _buildTheme(Color primary, Color secondary, Color surface, Color surfaceContainer) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: surface.computeLuminance() > 0.5 ? Brightness.light : Brightness.dark,
+      colorScheme: ColorScheme(
+        brightness: surface.computeLuminance() > 0.5 ? Brightness.light : Brightness.dark,
+        primary: primary,
+        onPrimary: Colors.white,
+        secondary: secondary,
+        onSecondary: Colors.white,
+        surface: surface,
+        onSurface: surface.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+        background: surface,
+        onBackground: surface.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+        error: Colors.red,
+        onError: Colors.white,
+      ),
+      scaffoldBackgroundColor: surface,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'ForexPro Calc',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.dark(
-          primary: AppColors.primary,
-          secondary: AppColors.tertiary,
-          surface: AppColors.surface,
-          background: AppColors.surface,
-        ),
-        scaffoldBackgroundColor: AppColors.surface,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-        ),
-      ),
+      theme: _getTheme(_selectedThemeIndex),
       home: ForexCalculatorHome(
-        onThemeChanged: _changeTheme,
-        currentThemeIndex: _selectedThemeIndex,
-        selectedLanguage: _selectedLanguage,
-        onLanguageChanged: _changeLanguage,
+        selectedTheme: _selectedThemeIndex,
+        onThemeChanged: (index) {
+          setState(() => _selectedThemeIndex = index);
+          _saveTheme(index);
+        },
+        selectedCalculator: _selectedCalculator,
+        onCalculatorChanged: (index) {
+          setState(() => _selectedCalculator = index);
+        },
       ),
     );
   }
 }
 
-class LanguageStrings {
-  static const Map<String, Map<String, String>> strings = {
-    'en': {
-      'app_title': 'ForexPro Calc',
-      'pip_value': 'Pip Value',
-      'position_size': 'Position Size',
-      'margin': 'Margin',
-      'leverage': 'Leverage',
-      'pnl': 'P&L',
-      'risk_reward': 'Risk/Reward',
-      'swap': 'Swap',
-      'currency_convert': 'Currency Convert',
-      'pivot_points': 'Pivot Points',
-      'fibonacci': 'Fibonacci',
-      'compound_growth': 'Compound Growth',
-      'kelly_criterion': 'Kelly Criterion',
-      'sharpe_ratio': 'Sharpe Ratio',
-      'history': 'History',
-      'favorites': 'Favorites',
-      'calculate': 'Calculate',
-      'clear': 'Clear',
-      'exchange_rates': 'Markets',
-      'advanced': 'Advanced',
-      'settings': 'Settings',
-      'calculators': 'Calculators',
-    },
-    'hi': {
-      'app_title': 'फॉरेक्सप्रो कैल्क',
-      'pip_value': 'पिप वैल्यू',
-      'position_size': 'पोजीशन साइज',
-      'margin': 'मार्जिन',
-      'leverage': 'लीवरेज',
-      'pnl': 'लाभ/हानि',
-      'risk_reward': 'जोखिम/इनाम',
-      'swap': 'स्वैप',
-      'currency_convert': 'करेंसी कन्वर्ट',
-      'pivot_points': 'पिवट पॉइंट्स',
-      'fibonacci': 'फिबोनैचि',
-      'compound_growth': 'चक्रवृद्धि वृद्धि',
-      'kelly_criterion': 'केली मानदंड',
-      'sharpe_ratio': 'शार्प अनुपात',
-      'history': 'इतिहास',
-      'favorites': 'पसंदीदा',
-      'calculate': 'गणना करें',
-      'clear': 'साफ़ करें',
-      'exchange_rates': 'बाजार',
-      'advanced': 'उन्नत',
-      'settings': 'सेटिंग्स',
-      'calculators': 'कैलकुलेटर',
-    },
-  };
-
-  static String get(String key, String language) {
-    return strings[language]?[key] ?? strings['en']?[key] ?? key;
-  }
-}
-
 class ForexCalculatorHome extends StatefulWidget {
+  final int selectedTheme;
   final Function(int) onThemeChanged;
-  final int currentThemeIndex;
-  final String selectedLanguage;
-  final Function(String) onLanguageChanged;
+  final int selectedCalculator;
+  final Function(int) onCalculatorChanged;
 
   const ForexCalculatorHome({
     Key? key,
+    required this.selectedTheme,
     required this.onThemeChanged,
-    required this.currentThemeIndex,
-    required this.selectedLanguage,
-    required this.onLanguageChanged,
+    required this.selectedCalculator,
+    required this.onCalculatorChanged,
   }) : super(key: key);
 
   @override
   State<ForexCalculatorHome> createState() => _ForexCalculatorHomeState();
 }
 
-class _ForexCalculatorHomeState extends State<ForexCalculatorHome> with TickerProviderStateMixin {
-  int _selectedCalculatorIndex = 0;
-  int _currentNavIndex = 0;
-  Map<String, dynamic> _exchangeRates = {};
-  bool _ratesLoaded = false;
-  late AnimationController _resultAnimationController;
+class _ForexCalculatorHomeState extends State<ForexCalculatorHome> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
-  final calculators = [
-    'pip_value',
-    'position_size',
-    'margin',
-    'leverage',
-    'pnl',
-    'risk_reward',
-    'swap',
-    'currency_convert',
-    'pivot_points',
-    'fibonacci',
-    'compound_growth',
-    'kelly_criterion',
-    'sharpe_ratio',
+  final List<String> calculatorNames = [
+    'Pip Value',
+    'Position Size',
+    'Margin',
+    'Leverage',
+    'Profit/Loss',
+    'Risk/Reward',
+    'Swap',
+    'Currency Converter',
+    'Pivot Points',
+    'Fibonacci',
+    'Compound Growth',
   ];
 
   @override
   void initState() {
     super.initState();
-    _resultAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
+    _animationController = AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    _fetchExchangeRates();
+    _animationController.forward();
   }
 
-  Future<void> _fetchExchangeRates() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://open.er-api.com/v6/latest/USD'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _exchangeRates = data['rates'] ?? {};
-          _ratesLoaded = true;
-        });
-      }
-    } catch (e) {
-      print('Error fetching exchange rates: $e');
+  @override
+  void didUpdateWidget(ForexCalculatorHome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedCalculator != widget.selectedCalculator) {
+      _animationController.reset();
+      _animationController.forward();
     }
   }
 
   @override
   void dispose() {
-    _resultAnimationController.dispose();
+    _animationController.dispose();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(65),
-        child: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          flexibleSpace: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: AppColors.outline.withOpacity(0.1),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.currency_exchange, color: AppColors.tertiary, size: 28),
-                      const SizedBox(width: 12),
-                      Text(
-                        LanguageStrings.get('app_title', widget.selectedLanguage),
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.palette, color: AppColors.tertiary),
-                        onPressed: _showThemePicker,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomNav(),
-    );
-  }
-
-  Widget _buildBody() {
-    switch (_currentNavIndex) {
-      case 0:
-        return _buildCalculatorsTab();
-      case 1:
-        return _buildMarketsTab();
-      case 2:
-        return _buildHistoryTab();
-      case 3:
-        return _buildSettingsTab();
-      default:
-        return _buildCalculatorsTab();
-    }
-  }
-
-  Widget _buildCalculatorsTab() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Calculator Selector Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(
-                  calculators.length,
-                  (index) => Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCalculatorIndex = index;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _selectedCalculatorIndex == index
-                              ? AppColors.primaryContainer
-                              : AppColors.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: _selectedCalculatorIndex == index
-                                ? AppColors.tertiary
-                                : Colors.transparent,
-                            width: 1,
-                          ),
-                          boxShadow: _selectedCalculatorIndex == index
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.tertiary.withOpacity(0.3),
-                                    blurRadius: 15,
-                              )
-                            ]
-                              : [],
-                        ),
-                        child: Text(
-                          LanguageStrings.get(calculators[index], widget.selectedLanguage),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _selectedCalculatorIndex == index
-                                ? Colors.white
-                                : AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Calculator Card
-            _buildGlassCard(
-              child: _buildCalculator(_selectedCalculatorIndex),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Market Context (Volatility & Session)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildGlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.bolt, color: AppColors.primary, size: 24),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Volatility',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Medium',
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildGlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Icon(Icons.schedule, color: AppColors.tertiary, size: 24),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.errorContainer.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'CLOSED',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.error,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'London Session',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '1h 12m',
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassCard({required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.outline.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: child,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCalculator(int index) {
-    switch (index) {
-      case 0:
-        return PipValueCalculator(
-          language: widget.selectedLanguage,
-          onResult: () {
-            _resultAnimationController.reset();
-            _resultAnimationController.forward();
-          },
-        );
-      case 1:
-        return PositionSizeCalculator(language: widget.selectedLanguage);
-      case 2:
-        return MarginCalculator(language: widget.selectedLanguage);
-      case 3:
-        return LeverageCalculator(language: widget.selectedLanguage);
-      case 4:
-        return PnLCalculator(language: widget.selectedLanguage);
-      case 5:
-        return RiskRewardCalculator(language: widget.selectedLanguage);
-      case 6:
-        return SwapCalculator(language: widget.selectedLanguage);
-      case 7:
-        return CurrencyConverterCalculator(
-          language: widget.selectedLanguage,
-          rates: _exchangeRates,
-        );
-      case 8:
-        return PivotPointsCalculator(language: widget.selectedLanguage);
-      case 9:
-        return FibonacciCalculator(language: widget.selectedLanguage);
-      case 10:
-        return CompoundGrowthCalculator(language: widget.selectedLanguage);
-      case 11:
-        return KellyCriterionCalculator(language: widget.selectedLanguage);
-      case 12:
-        return SharpeRatioCalculator(language: widget.selectedLanguage);
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Widget _buildMarketsTab() {
-    if (!_ratesLoaded) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-    }
-
-    final majorPairs = ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'INR'];
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'USD Exchange Rates',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...majorPairs.map((pair) {
-              final rate = _exchangeRates[pair] ?? 0.0;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildGlassCard(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'USD/$pair',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                      Text(
-                        rate.toStringAsFixed(4),
-                        style: GoogleFonts.jetbrainsMono(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.tertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryTab() {
-    final historyBox = Hive.box('calculationHistory');
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              LanguageStrings.get('history', widget.selectedLanguage),
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (historyBox.isEmpty)
-              _buildGlassCard(
-                child: Center(
-                  child: Text(
-                    'No calculations yet',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...List.generate(historyBox.length, (index) {
-                final item = historyBox.getAt(index) as Map;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildGlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['calculator'] ?? '',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          item['result'] ?? '',
-                          style: GoogleFonts.jetbrainsMono(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.tertiary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item['timestamp'] ?? '',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsTab() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              LanguageStrings.get('settings', widget.selectedLanguage),
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Theme',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildGlassCard(
-              child: ListTile(
-                title: Text(
-                  'Dark Navy & Gold',
-                  style: GoogleFonts.inter(color: AppColors.onSurface),
-                ),
-                trailing: Icon(
-                  Icons.check_circle,
-                  color: widget.currentThemeIndex == 0 ? AppColors.tertiary : Colors.transparent,
-                ),
-                onTap: () => widget.onThemeChanged(0),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Language',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildGlassCard(
-              child: Column(
-                children: [
-                  ListTile(
-                    title: Text('English', style: GoogleFonts.inter(color: AppColors.onSurface)),
-                    trailing: Icon(
-                      Icons.check_circle,
-                      color: widget.selectedLanguage == 'en' ? AppColors.tertiary : Colors.transparent,
-                    ),
-                    onTap: () => widget.onLanguageChanged('en'),
-                  ),
-                  Divider(color: AppColors.outline.withOpacity(0.1)),
-                  ListTile(
-                    title: Text('हिंदी (Hindi)', style: GoogleFonts.inter(color: AppColors.onSurface)),
-                    trailing: Icon(
-                      Icons.check_circle,
-                      color: widget.selectedLanguage == 'hi' ? AppColors.tertiary : Colors.transparent,
-                    ),
-                    onTap: () => widget.onLanguageChanged('hi'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: AppColors.outline.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-          ),
-          child: BottomNavigationBar(
-            backgroundColor: AppColors.surface.withOpacity(0.8),
-            currentIndex: _currentNavIndex,
-            onTap: (index) {
-              setState(() {
-                _currentNavIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            items: [
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.calculate),
-                label: LanguageStrings.get('calculators', widget.selectedLanguage),
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.query_stats),
-                label: LanguageStrings.get('exchange_rates', widget.selectedLanguage),
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.history),
-                label: LanguageStrings.get('history', widget.selectedLanguage),
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.settings),
-                label: LanguageStrings.get('settings', widget.selectedLanguage),
-              ),
-            ],
-            selectedItemColor: AppColors.tertiary,
-            unselectedItemColor: AppColors.onSurfaceVariant,
-          ),
-        ),
-      ),
-    );
   }
 
   void _showThemePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer.withOpacity(0.8),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: AppColors.outline.withOpacity(0.1)),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: GridView.builder(
+          shrinkWrap: true,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, mainAxisSpacing: 12, crossAxisSpacing: 12),
+          itemCount: 5,
+          itemBuilder: (context, index) {
+            final colors = [
+              [AppColors.theme1Primary, AppColors.theme1Secondary],
+              [AppColors.theme2Primary, AppColors.theme2Secondary],
+              [AppColors.theme3Primary, AppColors.theme3Secondary],
+              [AppColors.theme4Primary, AppColors.theme4Secondary],
+              [AppColors.theme5Primary, AppColors.theme5Secondary],
+            ];
+            return GestureDetector(
+              onTap: () {
+                widget.onThemeChanged(index);
+                Navigator.pop(context);
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: widget.selectedTheme == index ? Border.all(color: colors[index][0], width: 3) : null,
+                  gradient: LinearGradient(
+                    colors: [colors[index][0], colors[index][1]],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(Icons.currency_exchange, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              'ForexPro Calc',
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
             ),
+          ],
+        ),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.palette),
+            onPressed: _showThemePicker,
+            tooltip: 'Change Theme',
           ),
-          padding: const EdgeInsets.all(24),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Select Theme',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.onSurface,
+              // Calculator Selector
+              SizedBox(
+                height: 60,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: calculatorNames.length,
+                  itemBuilder: (context, index) {
+                    final isSelected = index == widget.selectedCalculator;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(calculatorNames[index]),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          widget.onCalculatorChanged(index);
+                        },
+                        backgroundColor: isDark ? theme.colorScheme.surface : Colors.grey[200],
+                        selectedColor: theme.colorScheme.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),
-              GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                shrinkWrap: true,
-                children: [
-                  _buildThemeOption('Navy & Gold', 0),
-                  _buildThemeOption('Blue & White', 1),
-                  _buildThemeOption('Green & Lime', 2),
-                  _buildThemeOption('Purple', 3),
-                  _buildThemeOption('Black & Cyan', 4),
-                ],
+
+              // Calculator Content
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: _buildCalculator(widget.selectedCalculator, theme),
               ),
             ],
           ),
@@ -832,192 +303,120 @@ class _ForexCalculatorHomeState extends State<ForexCalculatorHome> with TickerPr
     );
   }
 
-  Widget _buildThemeOption(String name, int index) {
-    return GestureDetector(
-      onTap: () {
-        widget.onThemeChanged(index);
-        Navigator.pop(context);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: widget.currentThemeIndex == index ? AppColors.tertiary : AppColors.outline.withOpacity(0.2),
-            width: 2,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              name,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildCalculator(int index, ThemeData theme) {
+    switch (index) {
+      case 0:
+        return PipValueCalculator(theme: theme);
+      case 1:
+        return PositionSizeCalculator(theme: theme);
+      case 2:
+        return MarginCalculator(theme: theme);
+      case 3:
+        return LeverageCalculator(theme: theme);
+      case 4:
+        return ProfitLossCalculator(theme: theme);
+      case 5:
+        return RiskRewardCalculator(theme: theme);
+      case 6:
+        return SwapCalculator(theme: theme);
+      case 7:
+        return CurrencyConverter(theme: theme);
+      case 8:
+        return PivotPointCalculator(theme: theme);
+      case 9:
+        return FibonacciCalculator(theme: theme);
+      case 10:
+        return CompoundGrowthCalculator(theme: theme);
+      default:
+        return Container();
+    }
   }
 }
 
-// ===== CALCULATORS =====
+// ==================== CALCULATOR WIDGETS ====================
 
 class PipValueCalculator extends StatefulWidget {
-  final String language;
-  final VoidCallback? onResult;
-  const PipValueCalculator({Key? key, required this.language, this.onResult}) : super(key: key);
+  final ThemeData theme;
+  const PipValueCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<PipValueCalculator> createState() => _PipValueCalculatorState();
 }
 
-class _PipValueCalculatorState extends State<PipValueCalculator> with TickerProviderStateMixin {
-  late TextEditingController lotSizeController;
-  late TextEditingController pairController;
-  String? result;
-  late AnimationController resultAnimationController;
-
-  @override
-  void initState() {
-    super.initState();
-    lotSizeController = TextEditingController();
-    pairController = TextEditingController(text: 'EURUSD');
-    resultAnimationController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-  }
+class _PipValueCalculatorState extends State<PipValueCalculator> {
+  final _currencyPairController = TextEditingController();
+  final _lotSizeController = TextEditingController(text: '1');
+  String _selectedCurrency = 'USD';
+  String _result = '';
 
   @override
   void dispose() {
-    lotSizeController.dispose();
-    pairController.dispose();
-    resultAnimationController.dispose();
+    _currencyPairController.dispose();
+    _lotSizeController.dispose();
     super.dispose();
   }
 
-  void calculate() {
-    try {
-      double lotSize = double.parse(lotSizeController.text);
-      String pair = pairController.text.toUpperCase();
-      double pipValue = pair.contains('JPY') ? (lotSize * 1000) / 100 : (lotSize * 10);
-
-      _saveToHistory('Pip Value', pipValue.toStringAsFixed(2));
-
-      setState(() {
-        result = NumberFormat.currency(symbol: '\$', decimalDigits: 2).format(pipValue);
-        resultAnimationController.reset();
-        resultAnimationController.forward();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid input')));
+  void _calculate() {
+    final lotSize = double.tryParse(_lotSizeController.text) ?? 0;
+    if (lotSize <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid lot size')));
+      return;
     }
-  }
 
-  void _saveToHistory(String calculator, String result) {
-    final historyBox = Hive.box('calculationHistory');
-    historyBox.add({
-      'calculator': calculator,
-      'result': result,
-      'timestamp': DateTime.now().toString(),
+    double pipValue = lotSize * 10;
+    setState(() {
+      _result = '${_selectedCurrency} ${pipValue.toStringAsFixed(2)}';
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return CalculatorCard(
+      title: 'Pip Value Calculator',
+      theme: widget.theme,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Pip Value Calculator',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.onSurface),
-            ),
-            Icon(Icons.info_outline, color: AppColors.tertiary, size: 20),
-          ],
+        TextField(
+          controller: _lotSizeController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Lot Size',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
-        const SizedBox(height: 24),
-        _InputField(label: 'Lot Size', controller: lotSizeController, hint: '1.00'),
         const SizedBox(height: 16),
-        _InputField(label: 'Currency Pair', controller: pairController, hint: 'EURUSD'),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: ElevatedButton(
-                onPressed: calculate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryContainer,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  'Calculate',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  lotSizeController.clear();
-                  pairController.text = 'EURUSD';
-                  setState(() => result = null);
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.tertiary),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Icon(Icons.refresh, color: AppColors.tertiary),
-              ),
-            ),
-          ],
+        DropdownButtonFormField<String>(
+          value: _selectedCurrency,
+          items: ['USD', 'EUR', 'GBP', 'JPY'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (value) => setState(() => _selectedCurrency = value ?? 'USD'),
+          decoration: InputDecoration(
+            labelText: 'Account Currency',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
-        if (result != null) ...[
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
           const SizedBox(height: 24),
-          ScaleTransition(
-            scale: Tween<double>(begin: 0.5, end: 1.0).animate(
-              CurvedAnimation(parent: resultAnimationController, curve: Curves.elasticOut),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.tertiary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.tertiary.withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Current Pip Value',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.tertiary),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    result!,
-                    style: GoogleFonts.jetbrainsMono(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.onSurface,
-                    ),
-                  ),
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Pip Value', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text(_result, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
             ),
           ),
         ],
@@ -1026,245 +425,1103 @@ class _PipValueCalculatorState extends State<PipValueCalculator> with TickerProv
   }
 }
 
-// Other Calculators (Simplified for brevity - same pattern as PipValueCalculator)
 class PositionSizeCalculator extends StatefulWidget {
-  final String language;
-  const PositionSizeCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const PositionSizeCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<PositionSizeCalculator> createState() => _PositionSizeCalculatorState();
 }
 
 class _PositionSizeCalculatorState extends State<PositionSizeCalculator> {
+  final _balanceController = TextEditingController();
+  final _riskController = TextEditingController(text: '2');
+  final _stoplossController = TextEditingController(text: '50');
+  String _result = '';
+
+  @override
+  void dispose() {
+    _balanceController.dispose();
+    _riskController.dispose();
+    _stoplossController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final balance = double.tryParse(_balanceController.text) ?? 0;
+    final riskPercent = double.tryParse(_riskController.text) ?? 0;
+    final stoplossPips = double.tryParse(_stoplossController.text) ?? 0;
+
+    if (balance <= 0 || riskPercent <= 0 || stoplossPips <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double positionSize = (balance * riskPercent / 100) / (stoplossPips * 10);
+    setState(() {
+      _result = positionSize.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Position Size Calculator',
-      style: GoogleFonts.inter(color: AppColors.onSurface),
+    return CalculatorCard(
+      title: 'Position Size Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _balanceController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Account Balance',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _riskController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Risk %',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _stoplossController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Stop Loss (Pips)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Recommended Position Size', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text('$_result Lots', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
 class MarginCalculator extends StatefulWidget {
-  final String language;
-  const MarginCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const MarginCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<MarginCalculator> createState() => _MarginCalculatorState();
 }
 
 class _MarginCalculatorState extends State<MarginCalculator> {
+  final _lotSizeController = TextEditingController(text: '1');
+  final _leverageController = TextEditingController(text: '50');
+  String _result = '';
+
+  @override
+  void dispose() {
+    _lotSizeController.dispose();
+    _leverageController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final lotSize = double.tryParse(_lotSizeController.text) ?? 0;
+    final leverage = double.tryParse(_leverageController.text) ?? 0;
+
+    if (lotSize <= 0 || leverage <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double margin = (lotSize * 100000) / leverage;
+    setState(() {
+      _result = margin.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Margin Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Margin Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _lotSizeController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Lot Size',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _leverageController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Leverage',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Required Margin', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text('USD $_result', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
 class LeverageCalculator extends StatefulWidget {
-  final String language;
-  const LeverageCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const LeverageCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<LeverageCalculator> createState() => _LeverageCalculatorState();
 }
 
 class _LeverageCalculatorState extends State<LeverageCalculator> {
+  final _balanceController = TextEditingController();
+  final _positionController = TextEditingController();
+  String _result = '';
+
+  @override
+  void dispose() {
+    _balanceController.dispose();
+    _positionController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final balance = double.tryParse(_balanceController.text) ?? 0;
+    final position = double.tryParse(_positionController.text) ?? 0;
+
+    if (balance <= 0 || position <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double leverage = position / balance;
+    setState(() {
+      _result = leverage.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Leverage Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Leverage Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _balanceController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Account Balance',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _positionController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Position Size',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Effective Leverage', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text('1:$_result', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
-class PnLCalculator extends StatefulWidget {
-  final String language;
-  const PnLCalculator({Key? key, required this.language}) : super(key: key);
+class ProfitLossCalculator extends StatefulWidget {
+  final ThemeData theme;
+  const ProfitLossCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
-  State<PnLCalculator> createState() => _PnLCalculatorState();
+  State<ProfitLossCalculator> createState() => _ProfitLossCalculatorState();
 }
 
-class _PnLCalculatorState extends State<PnLCalculator> {
+class _ProfitLossCalculatorState extends State<ProfitLossCalculator> {
+  final _entryController = TextEditingController();
+  final _exitController = TextEditingController();
+  final _lotController = TextEditingController(text: '1');
+  String _tradeType = 'Buy';
+  String _result = '';
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _exitController.dispose();
+    _lotController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final entry = double.tryParse(_entryController.text) ?? 0;
+    final exit = double.tryParse(_exitController.text) ?? 0;
+    final lot = double.tryParse(_lotController.text) ?? 0;
+
+    if (entry <= 0 || exit <= 0 || lot <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double pnl = _tradeType == 'Buy' ? (exit - entry) * lot * 100000 : (entry - exit) * lot * 100000;
+    setState(() {
+      _result = pnl.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('P&L Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Profit/Loss Calculator',
+      theme: widget.theme,
+      children: [
+        DropdownButtonFormField<String>(
+          value: _tradeType,
+          items: ['Buy', 'Sell'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (value) => setState(() => _tradeType = value ?? 'Buy'),
+          decoration: InputDecoration(
+            labelText: 'Trade Type',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _entryController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Entry Price',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _exitController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Exit Price',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _lotController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Lot Size',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: (double.parse(_result) >= 0 ? Colors.green : Colors.red).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('P&L', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text(_result, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: double.parse(_result) >= 0 ? Colors.green : Colors.red)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
 class RiskRewardCalculator extends StatefulWidget {
-  final String language;
-  const RiskRewardCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const RiskRewardCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<RiskRewardCalculator> createState() => _RiskRewardCalculatorState();
 }
 
 class _RiskRewardCalculatorState extends State<RiskRewardCalculator> {
+  final _entryController = TextEditingController();
+  final _stoplossController = TextEditingController();
+  final _takeprofitController = TextEditingController();
+  String _result = '';
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _stoplossController.dispose();
+    _takeprofitController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final entry = double.tryParse(_entryController.text) ?? 0;
+    final stoplos = double.tryParse(_stoplossController.text) ?? 0;
+    final takeprofit = double.tryParse(_takeprofitController.text) ?? 0;
+
+    if (entry <= 0 || stoplos <= 0 || takeprofit <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double risk = (entry - stoplos).abs();
+    double reward = (takeprofit - entry).abs();
+    double ratio = reward / risk;
+
+    setState(() {
+      _result = 'Risk: ${risk.toStringAsFixed(2)} | Reward: ${reward.toStringAsFixed(2)} | Ratio: 1:${ratio.toStringAsFixed(2)}';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Risk/Reward Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Risk/Reward Ratio',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _entryController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Entry Price',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _stoplossController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Stop Loss Price',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _takeprofitController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Take Profit Price',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Risk/Reward Analysis', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text(_result, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
 class SwapCalculator extends StatefulWidget {
-  final String language;
-  const SwapCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const SwapCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<SwapCalculator> createState() => _SwapCalculatorState();
 }
 
 class _SwapCalculatorState extends State<SwapCalculator> {
+  final _lotController = TextEditingController(text: '1');
+  final _rateController = TextEditingController();
+  final _nightsController = TextEditingController(text: '1');
+  String _result = '';
+
+  @override
+  void dispose() {
+    _lotController.dispose();
+    _rateController.dispose();
+    _nightsController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final lot = double.tryParse(_lotController.text) ?? 0;
+    final rate = double.tryParse(_rateController.text) ?? 0;
+    final nights = int.tryParse(_nightsController.text) ?? 0;
+
+    if (lot <= 0 || rate == 0 || nights <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double swap = lot * 100000 * rate * nights / 100;
+    setState(() {
+      _result = swap.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Swap Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Swap Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _lotController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Lot Size',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _rateController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Swap Rate (%)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _nightsController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Number of Nights',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total Swap', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text('USD $_result', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
-class CurrencyConverterCalculator extends StatefulWidget {
-  final String language;
-  final Map<String, dynamic> rates;
-  const CurrencyConverterCalculator({Key? key, required this.language, required this.rates}) : super(key: key);
+class CurrencyConverter extends StatefulWidget {
+  final ThemeData theme;
+  const CurrencyConverter({Key? key, required this.theme}) : super(key: key);
 
   @override
-  State<CurrencyConverterCalculator> createState() => _CurrencyConverterCalculatorState();
+  State<CurrencyConverter> createState() => _CurrencyConverterState();
 }
 
-class _CurrencyConverterCalculatorState extends State<CurrencyConverterCalculator> {
+class _CurrencyConverterState extends State<CurrencyConverter> {
+  final _amountController = TextEditingController();
+  final _rateController = TextEditingController(text: '1.0');
+  String _fromCurrency = 'USD';
+  String _toCurrency = 'EUR';
+  String _result = '';
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final rate = double.tryParse(_rateController.text) ?? 0;
+
+    if (amount <= 0 || rate <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double converted = amount * rate;
+    setState(() {
+      _result = converted.toStringAsFixed(2);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Currency Converter', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Currency Converter',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Amount',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _fromCurrency,
+                items: ['USD', 'EUR', 'GBP', 'JPY'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) => setState(() => _fromCurrency = value ?? 'USD'),
+                decoration: InputDecoration(
+                  labelText: 'From',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward, color: widget.theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _toCurrency,
+                items: ['USD', 'EUR', 'GBP', 'JPY'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (value) => setState(() => _toCurrency = value ?? 'EUR'),
+                decoration: InputDecoration(
+                  labelText: 'To',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _rateController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Exchange Rate',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Convert', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$_fromCurrency to $_toCurrency', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text('$_toCurrency $_result', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
-class PivotPointsCalculator extends StatefulWidget {
-  final String language;
-  const PivotPointsCalculator({Key? key, required this.language}) : super(key: key);
+class PivotPointCalculator extends StatefulWidget {
+  final ThemeData theme;
+  const PivotPointCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
-  State<PivotPointsCalculator> createState() => _PivotPointsCalculatorState();
+  State<PivotPointCalculator> createState() => _PivotPointCalculatorState();
 }
 
-class _PivotPointsCalculatorState extends State<PivotPointsCalculator> {
+class _PivotPointCalculatorState extends State<PivotPointCalculator> {
+  final _highController = TextEditingController();
+  final _lowController = TextEditingController();
+  final _closeController = TextEditingController();
+  Map<String, String> _results = {};
+
+  @override
+  void dispose() {
+    _highController.dispose();
+    _lowController.dispose();
+    _closeController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final high = double.tryParse(_highController.text) ?? 0;
+    final low = double.tryParse(_lowController.text) ?? 0;
+    final close = double.tryParse(_closeController.text) ?? 0;
+
+    if (high <= 0 || low <= 0 || close <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double pivot = (high + low + close) / 3;
+    double r1 = (2 * pivot) - low;
+    double s1 = (2 * pivot) - high;
+    double r2 = pivot + (high - low);
+    double s2 = pivot - (high - low);
+
+    setState(() {
+      _results = {
+        'Pivot': pivot.toStringAsFixed(4),
+        'R1': r1.toStringAsFixed(4),
+        'R2': r2.toStringAsFixed(4),
+        'S1': s1.toStringAsFixed(4),
+        'S2': s2.toStringAsFixed(4),
+      };
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Pivot Points Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Pivot Point Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _highController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'High',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _lowController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Low',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _closeController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Close',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_results.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var entry in _results.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key, style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                        Text(entry.value, style: TextStyle(fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
 class FibonacciCalculator extends StatefulWidget {
-  final String language;
-  const FibonacciCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const FibonacciCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<FibonacciCalculator> createState() => _FibonacciCalculatorState();
 }
 
 class _FibonacciCalculatorState extends State<FibonacciCalculator> {
+  final _highController = TextEditingController();
+  final _lowController = TextEditingController();
+  Map<String, String> _results = {};
+
+  @override
+  void dispose() {
+    _highController.dispose();
+    _lowController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final high = double.tryParse(_highController.text) ?? 0;
+    final low = double.tryParse(_lowController.text) ?? 0;
+
+    if (high <= 0 || low <= 0 || high <= low) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double diff = high - low;
+    Map<String, String> levels = {
+      '0%': high.toStringAsFixed(4),
+      '23.6%': (high - diff * 0.236).toStringAsFixed(4),
+      '38.2%': (high - diff * 0.382).toStringAsFixed(4),
+      '50%': (high - diff * 0.5).toStringAsFixed(4),
+      '61.8%': (high - diff * 0.618).toStringAsFixed(4),
+      '78.6%': (high - diff * 0.786).toStringAsFixed(4),
+      '100%': low.toStringAsFixed(4),
+    };
+
+    setState(() {
+      _results = levels;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Fibonacci Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Fibonacci Retracement',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _highController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Swing High',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _lowController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Swing Low',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_results.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Fibonacci Levels', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                for (var entry in _results.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key, style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                        Text(entry.value, style: TextStyle(fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
 class CompoundGrowthCalculator extends StatefulWidget {
-  final String language;
-  const CompoundGrowthCalculator({Key? key, required this.language}) : super(key: key);
+  final ThemeData theme;
+  const CompoundGrowthCalculator({Key? key, required this.theme}) : super(key: key);
 
   @override
   State<CompoundGrowthCalculator> createState() => _CompoundGrowthCalculatorState();
 }
 
 class _CompoundGrowthCalculatorState extends State<CompoundGrowthCalculator> {
+  final _balanceController = TextEditingController();
+  final _returnController = TextEditingController(text: '5');
+  final _periodsController = TextEditingController(text: '12');
+  String _result = '';
+
+  @override
+  void dispose() {
+    _balanceController.dispose();
+    _returnController.dispose();
+    _periodsController.dispose();
+    super.dispose();
+  }
+
+  void _calculate() {
+    final balance = double.tryParse(_balanceController.text) ?? 0;
+    final returnPercent = double.tryParse(_returnController.text) ?? 0;
+    final periods = int.tryParse(_periodsController.text) ?? 0;
+
+    if (balance <= 0 || returnPercent == 0 || periods <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid values')));
+      return;
+    }
+
+    double finalBalance = balance * pow(1 + (returnPercent / 100), periods) as double;
+    double gain = finalBalance - balance;
+
+    setState(() {
+      _result = 'Final: \$${finalBalance.toStringAsFixed(2)} | Gain: \$${gain.toStringAsFixed(2)}';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Text('Compound Growth Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
+    return CalculatorCard(
+      title: 'Compound Growth Calculator',
+      theme: widget.theme,
+      children: [
+        TextField(
+          controller: _balanceController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Starting Balance',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _returnController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Return per Period (%)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _periodsController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Number of Periods',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _calculate,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            backgroundColor: widget.theme.colorScheme.primary,
+          ),
+          child: Text('Calculate', style: TextStyle(color: widget.theme.colorScheme.onPrimary, fontSize: 16)),
+        ),
+        if (_result.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Compound Growth', style: TextStyle(color: widget.theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(height: 8),
+                Text(_result, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: widget.theme.colorScheme.primary)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
-class KellyCriterionCalculator extends StatefulWidget {
-  final String language;
-  const KellyCriterionCalculator({Key? key, required this.language}) : super(key: key);
+// ==================== REUSABLE CARD WIDGET ====================
 
-  @override
-  State<KellyCriterionCalculator> createState() => _KellyCriterionCalculatorState();
-}
+class CalculatorCard extends StatelessWidget {
+  final String title;
+  final ThemeData theme;
+  final List<Widget> children;
 
-class _KellyCriterionCalculatorState extends State<KellyCriterionCalculator> {
-  @override
-  Widget build(BuildContext context) {
-    return Text('Kelly Criterion Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
-  }
-}
-
-class SharpeRatioCalculator extends StatefulWidget {
-  final String language;
-  const SharpeRatioCalculator({Key? key, required this.language}) : super(key: key);
-
-  @override
-  State<SharpeRatioCalculator> createState() => _SharpeRatioCalculatorState();
-}
-
-class _SharpeRatioCalculatorState extends State<SharpeRatioCalculator> {
-  @override
-  Widget build(BuildContext context) {
-    return Text('Sharpe Ratio Calculator', style: GoogleFonts.inter(color: AppColors.onSurface));
-  }
-}
-
-// ===== UI COMPONENTS =====
-
-class _InputField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final String hint;
-
-  const _InputField({
+  const CalculatorCard({
     Key? key,
-    required this.label,
-    required this.controller,
-    required this.hint,
+    required this.title,
+    required this.theme,
+    required this.children,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.onSurfaceVariant,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.numberWithOptions(decimal: true),
-          style: GoogleFonts.jetbrainsMono(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.onSurface,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.jetbrainsMono(color: AppColors.onSurfaceVariant),
-            filled: true,
-            fillColor: AppColors.surfaceContainerHigh.withOpacity(0.5),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.outline.withOpacity(0.2)),
+    return Card(
+      color: theme.colorScheme.surface,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
+            const SizedBox(height: 20),
+            ...children,
+          ],
         ),
-      ],
+      ),
     );
   }
 }
